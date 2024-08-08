@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Code Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+            width: 60%;
+            margin: auto;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        .flash {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 1000;
+        }
+
+        .flash.visible {
+            display: block;
+        }
+
+        .speed-control {
+            margin-top: 10px;
+        }
+
+        #currentSymbol {
+            margin-top: 10px;
+            background-color: lightgray;
+        }
+
+        .speed-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin-top: 50px;
+        }
+
+        #speedDisplay {
+            font-size: 18px;
+        }
+
+        #morseOutput {
+            font-size: large;
+            background-color: lightgray;
+            max-height: 50px;
+            overflow-y: scroll;
+        }
+
+        .faq {
+            margin-top: 50px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Morse Code Converter</h2>
+
+    <div>
+        <p>Text to Morse Code</p>
+        <textarea id="textToConvert" placeholder="Enter text here..."></textarea>
+        <button onclick="convertTextToMorse()">Convert to Morse Code</button>
+        <button onclick="playMorseCode()" id="playButton" disabled>Play</button>
+        <p id="morseOutput"></p>
+        <p id="currentSymbol">Current Symbol: None</p>
+
+    </div>
+
+    <div class="speed-control">
+        <input type="range" id="speedSlider" min="0.1" max="5.0" step="0.1" value="1.0" style="width: 300px;">
+        <span id="speedDisplay">Speed: 1x</span>
+    </div>
+
+    <div class="flash" id="flash"></div>
+
+    <div class="faq">
+        <a href="https://en.wikipedia.org/wiki/Morse_code" target="_blank">What is Morse code?</a>
+    </div>
+
+    <script>
+
+        const morseCode = {
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.', 'G': '--.', 'H': '....', 'I': '..', 'J': '.---',
+            'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-',
+            'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-', 'Y': '-.--', 'Z': '--..',
+            '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----',
+            '.': '.-.-.-', ',': '--..--', '?': '..--..', "'": '.----.', '!': '-.-.--', '/': '-..-.', '(': '-.--.', ')': '-.--.-', '&': '.-...', ':': '---...', ';': '-.-.-.', '=': '-...-', '+': '.-.-.', '-': '-....-', '_': '..--.-', '"': '.-..-.', '@': '.--.-'
+        };
+
+        const morseToText = Object.fromEntries(Object.entries(morseCode).map(([k, v]) => [v, k]));
+
+        const speed = 1; // Default speed multiplier
+        const baseDurationDot = 100; // Base duration for dot in milliseconds
+        const baseDurationDash = 300; // Base duration for dash in milliseconds
+        const intervalBetweenSignals = 100; // Base interval between signals in milliseconds
+
+        function convertTextToMorse() {
+            const text = document.getElementById('textToConvert').value.toUpperCase();
+            const playButton = document.getElementById('playButton');
+            playButton.removeAttribute('disabled');
+            let morse = '';
+            let morseHTML = '';
+            for (let char of text) {
+                if (char === ' ') {
+                    morse += ' / ';
+                } else if (morseCode[char]) {
+                    morse += morseCode[char] + ' ';
+                }
+            }
+            document.getElementById('morseOutput').innerText = morse.trim();
+        }
+
+        function playMorseCode() {
+            const morse = document.getElementById('morseOutput').innerText;
+            playMorse(morse);
+        }
+
+        function playMorse(morse) {
+            const flash = document.getElementById('flash');
+            const currentSymbolDisplay = document.getElementById('currentSymbol');
+
+            const durationDot = baseDurationDot / speed;
+            const durationDash = baseDurationDash / speed;
+            const intervalBetweenSignalsAdjusted = intervalBetweenSignals / speed;
+
+            let delay = 0;
+
+            function playNextChar() {
+                if (morse.length === 0) {
+                    currentSymbolDisplay.innerText = 'Current Symbol: None';
+                    const playButton = document.getElementById('playButton');
+                    playButton.disabled = true;                    
+                    return;
+                }
+                const char = morse[0];
+                morse = morse.slice(1);
+
+                currentSymbolDisplay.innerText = `Current Symbol: ${char}`;
+
+                if (char === '.') {
+                    setTimeout(() => {
+                        flash.classList.add('visible');
+                        setTimeout(() => flash.classList.remove('visible'), durationDot / 2);
+                    }, delay);
+                    delay += durationDot + intervalBetweenSignalsAdjusted;
+                } else if (char === '-') {
+                    setTimeout(() => {
+                        flash.classList.add('visible');
+                        setTimeout(() => flash.classList.remove('visible'), durationDash / 2);
+                    }, delay);
+                    delay += durationDash + intervalBetweenSignalsAdjusted;
+                } else if (char === ' ') {
+                    // space between words
+                    delay += intervalBetweenSignalsAdjusted * 3;
+                } else if (char === '/') {
+                    // space between words
+                    delay += intervalBetweenSignalsAdjusted * 7;
+                }
+
+                // account for delay adjustment
+                setTimeout(playNextChar, delay - (intervalBetweenSignalsAdjusted + durationDot));
+            }
+
+            playNextChar();
+        }
+        const speedSlider = document.getElementById('speedSlider');
+        const speedDisplay = document.getElementById('speedDisplay');
+
+        function updateSpeedDisplay() {
+            const speed = speedSlider.value;
+            speedDisplay.textContent = `Speed: ${speed}x`;
+        }
+
+        speedSlider.addEventListener('input', updateSpeedDisplay);
+
+        updateSpeedDisplay();
+    </script>
+</body>
+
+</html>
